@@ -1,0 +1,1393 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate, proxy-revalidate, max-age=0">
+    <meta http-equiv="Pragma" content="no-cache">
+    <meta http-equiv="Expires" content="0">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="cache-control" content="no-cache">
+    <meta name="expires" content="Thu, 01 Jan 1970 00:00:00 GMT">
+    <meta name="revisit-after" content="0">
+    <title>JMDM Damage Meter v2.0</title>
+    <style>
+        :root {
+        /* 수정가능 */
+          /* 기본 배경 및 텍스트 */
+          --bg-color:         #1e1e1e;
+          --bg-soft:          #2a2a2a;
+          --text-color:       #e0e0e0;
+          --text-dim:         #999999;
+          --border-color:     #333333;
+        
+          /* 강조 및 기능 색  */
+          --primary-color:    #4D9DE0; /* 하늘색 강조 */
+          --danger-color:     #FF6B6B; /* 경고 또는 강한 딜 */
+          --success-color:    #7AE582; /* 회복/완료 */
+          --warning-color:    #FFD93D; /* 경고/주의 */
+        
+          /* 그래프 등 시각적 요소용 */
+          --bar-color-1:      #FF6B6B;
+          --bar-color-2:      #4D9DE0;
+          --bar-color-3:      #7AE582;
+          --bar-bg:           rgba(255, 255, 255, 0.06);
+        }
+        body {
+            font-family: '맑은 고딕', 'Malgun Gothic', Arial, sans-serif;
+            font-size: 1em;
+            margin: 0;
+            padding: 0;
+            background: var(--bg-color);
+            color: var(--text-color)
+        }
+        label {
+            color: var(--text-color);
+            font-size: 0.9em;
+            margin-right: 8px;
+            display: inline-block;
+            vertical-align: middle;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 40px auto;
+            border-radius: 18px;
+            box-shadow: 0 8px 32px rgba(60,60,120,0.10);
+            padding: 36px 30px 28px 30px;
+            position: relative;
+            display: flex;
+            flex-direction: column;
+            min-height: 90vh;
+        }
+        .btn {
+            background-color: var(--primary-color);
+            color: black;
+            padding: 7px 22px;
+            border: none;
+            border-radius: 6px;
+            font-weight: 600;
+            font-size: 1.0em;
+            cursor: pointer;
+            box-shadow: 0 2px 8px rgba(60,60,120,0.07);
+            transition: background 0.2s;
+            outline: none;
+        }
+        .slt {
+          background-color: #2a2a2a;
+          color: #e0e0e0;
+          border: 1px solid #444;
+          padding: 6px 10px;
+          border-radius: 6px;
+          font-size: 0.9em;
+          appearance: none;     /* 화살표 제거 (커스터마이징 가능) */
+          -webkit-appearance: none;
+          -moz-appearance: none;
+          background-image: url("data:image/svg+xml;charset=UTF-8,<svg fill='%23aaa' height='20' viewBox='0 0 24 24' width='20' xmlns='http://www.w3.org/2000/svg'><path d='M7 10l5 5 5-5z'/></svg>");
+          background-repeat: no-repeat;
+          background-position: right 10px center;
+          background-size: 12px;
+        }
+
+        #conn-controls {
+            display: inline-flex;
+            margin-bottom: 18px;
+            gap: 12px;
+            align-items: center;
+            justify-content: center;
+            background: none;
+            box-shadow: none;
+        }
+        #disconnectBtn {
+            background: #43a047;
+            color: #fff;
+        }
+        #disconnectBtn:hover {
+            background: #388e3c;
+        }
+        #reconnectBtn {
+            background: #e53935;
+            color: #fff;
+        }
+        #reconnectBtn:hover {
+            background: #b71c1c;
+        }
+
+
+        #damage-stats-panel {
+            margin-bottom:18px;
+            background:var(--bg-soft);
+            border-radius:10px;
+            padding:10px 16px;
+            color:#444;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            position: relative;
+        }
+        
+        .options-bar {
+            display: flex;
+            align-items: center;
+            gap: 18px;
+            margin-bottom: 2px;
+            min-height: 32px;
+        }
+        .options-bar #conn-controls {
+            justify-content: flex-end;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 4px;
+            margin: 0 0 0 18px;
+            background: none;
+            box-shadow: none;
+            min-width: 120px;
+        }
+        .options-bar label {
+            font-size: 1em;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            cursor: pointer;
+            user-select: none;
+        }
+        .options-bar input[type="checkbox"] {
+            accent-color: #5a2d82;
+            width: 18px;
+            height: 18px;
+            margin-right: 4px;
+        }
+        #damage-stats-list {
+            margin:8px 0 0 18px;
+            padding:0;
+        }
+
+        .runtime-bar {
+            color: var(--text-color);
+            margin: 8px 15px; 
+            font-weight: bold;
+        }
+
+        
+        .damage-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 10px;
+            background: var(--bg-soft);
+            border-radius: 8px;
+            overflow: hidden;
+        }
+        
+        .damage-table th {
+            background: #3a3a3a;
+            color: #e0e0e0;
+            padding: 12px 8px;
+            text-align: center;
+            font-weight: 600;
+            font-size: 0.9em;
+            border-bottom: 2px solid #4a4a4a;
+        }
+        
+        .damage-table td {
+            padding: 10px 8px;
+            text-align: center;
+            border-bottom: 1px solid #333;
+            font-size: 0.85em;
+        }
+        
+        .damage-table tr:hover {
+            background: rgba(77, 157, 224, 0.1);
+        }
+        
+        .rank-row {
+            background: linear-gradient(90deg, #2c3a45 20%, #1a232a 100%);
+            color: #aac4d6;
+            cursor: pointer;
+            position: relative;
+        }
+        
+        .rank-row.rank-1 {
+            background: linear-gradient(90deg, #4a3e1a 20%, #2f2612 100%);
+            color: #f3e38a;
+            font-weight: bold;
+        }
+        
+        .rank-row.rank-2 {
+            background: linear-gradient(90deg, #3c3c3c 20%, #262626 100%);
+            color: #d0d0d0;
+        }
+        
+        .rank-row.rank-3 {
+            background: linear-gradient(90deg, #4a2e1e 20%, #2b1a12 100%);
+            color: #f3d8bd;
+        }
+        
+        .user-cell {
+            text-align: left !important;
+            font-weight: bold;
+            position: relative;
+        }
+        
+        .user-badge {
+            background: #445244;
+            color: #d0c9f6;
+            border-radius: 4px;
+            padding: 3px 8px;
+            font-size: 0.8em;
+            font-weight: 600;
+            border: 1px solid #5a4a80;
+        }
+        
+        .user-badge.me {
+            background: #d73a29 !important;
+            color: #fff !important;
+            border: 1px solid #c85a7c !important;
+        }
+        
+        .damage-value {
+            font-weight: bold;
+            color: #fff;
+        }
+        
+        .contribution-value {
+            color: #ff6b6b;
+            font-weight: bold;
+        }
+        
+        .dps-value {
+            color: #4D9DE0;
+            font-weight: bold;
+        }
+        
+        .min-dps-value {
+            color: #7AE582;
+        }
+        
+        .max-dps-value {
+            color: #FFD93D;
+        }
+        
+        .crit-rate {
+            color: #ff9800;
+        }
+        
+        .add-rate {
+            color: #9c27b0;
+        }
+
+
+        
+        .detail-panel {
+            margin-top: 18px;
+            background: var(--bg-soft);
+            border-radius: 16px;
+            border: 2.5px solid #2a2a2a;
+            box-shadow: 0 4px 24px rgba(255, 215, 64, 0.10), 0 1.5px 0 #2a2a2a inset;
+            padding: 22px 36px;
+            font-size: 1.13em;
+            color: var(--text-color);
+            min-height: 38px;
+            position: static;
+            left: unset;
+            top: unset;
+            transform: none;
+            z-index: 20;
+            margin-top: 18px;
+            margin-bottom: 0;
+            visibility: hidden;
+        }
+        .detail-panel.visible {
+            visibility: visible;
+        }
+        /* detail-panel2는 detail-panel과 동일한 스타일 사용 */
+        #detail-panel2.detail-panel {
+            margin-top: 12px;
+        }
+        .detail-title {
+            font-size: 0.9em;
+            font-weight: bold;
+            color: #ffb300;
+            margin-bottom: 8px;
+            display: block;
+            letter-spacing: 1px;
+        }
+        .detail-stats {
+            display: flex;
+            flex-direction: column;
+            gap: 7px;
+            align-items: flex-start;
+            font-size: 0.9em;
+            margin-top: 2px;
+        }
+        .detail-label {
+            color: var(--text-dim);
+            font-weight: 600;
+            font-size: 0.9em;
+            margin-right: 2px;
+        }
+        .detail-value {
+            color: #c0b0fa;
+            font-weight: bold;
+            font-size: 0.9em;
+            margin-right: 10px;
+        }
+        .detail-dot {
+            color: #d84315;
+            font-weight: bold;
+        }
+
+        .skill-table {
+            width: 100%;
+            table-layout: fixed;
+            border-collapse: collapse;
+            margin-top: 22px;
+            background: none;
+            font-size: 0.9em;
+
+            .skill-row {
+                position: relative;
+                display: flex;
+                padding: 6px 12px;
+                align-items: center;
+                gap: 12px;
+                font-size: 1em;
+                cursor: pointer;
+            }
+            .skill-row .bar-bg {
+              position: absolute;
+              top: 2px;
+              left: 0;
+              bottom: 2px;
+              background: #FF6B6B;
+              opacity: 0.25;
+              border-radius: 6px;
+              z-index: 0;
+              pointer-events: none;
+            }         
+            .skill-row > div {
+              position: relative;
+              z-index: 1;
+              white-space: nowrap;
+            }
+            .skill-name {
+              flex: 1;
+            }
+            .skill-damage, .skill-crit, .skill-addhit {
+                font-size: 0.8em;
+                text-align: right;
+                min-width: 7em;
+            }
+
+            .skill-detail-row {
+                position: relative;
+                display: block;
+                flex-wrap: wrap;
+                gap: 12px;
+                padding: 8px 122px 8px 12px; /* 왼쪽 여백은 줄이고, bar 공간 고려한 오른쪽 */
+                background-color: #1f1f1f;
+                border-left: 3px solid #4D9DE0; /* 포인트 컬러 */
+                border-radius: 0 0 8px 8px;
+                font-size: 0.85em;
+                color: #ccc;
+                box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.05);
+                transition: background-color 0.2s ease;
+            }
+            .skill-detail-row > div{
+                position: relative;
+                display: flex;
+                padding: 6px;
+            }
+            .skill-detail-row > div > div{
+                padding-right: 1em;
+            }
+            .hidden {
+                display: none;
+            }   
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div id="damage-stats-panel">
+            <div class="options-bar"> 
+                <div id="conn-controls">
+                    <button id="disconnectBtn" class="btn" style="display:none;">⛔ 연결 중지</button>
+                    <button id="reconnectBtn" class="btn">🔄 재연결</button>
+                </div>
+                <button id="clearBtn" class="btn">초기화</button>
+                <label for="calcmode">집계 방식</label>
+                <select id="calcmodechkbox" class="slt" name="calcmode">
+                    <option value="all">모두</option>
+                    <option value="highest_hp">최대 HP 대상</option>
+                    <option value="most_attacked">딜 집중 대상</option>
+                </select>
+                <label>
+                    <input type="checkbox" id="singleModeCheckbox">
+                    <span>허수아비 모드</span>
+                </label>
+                <button id="saveAllBtn" class="btn">저장</button>
+                <button id="loadAllBtn" class="btn">불러오기</button>
+            </div>
+            <div id="runtime-display" class="runtime-bar">
+                ⏱️ 전투시간: <span id="runtime-text">0.00초</span>
+            </div>            
+            <table id="damage-stats-table" class="damage-table">
+                <thead>
+                    <tr>
+                        <th>유저</th>
+                        <th>총 데미지</th>
+                        <th>기여도</th>
+                        <th>DPS</th>
+                        <th>최소 DPS</th>
+                        <th>최대 DPS</th>
+                        <th>치명타율</th>
+                        <th>추가타율</th>
+                    </tr>
+                </thead>
+                <tbody id="damage-stats-list">
+                </tbody>
+            </table>
+        </div>
+        <div>
+            <div id="detail-panel" class="detail-panel"></div>
+        </div>
+    </div>
+    <script>
+        let ws;
+        const wsUrl = "ws://localhost:8080";
+        const disconnectBtn = document.getElementById('disconnectBtn');
+        const reconnectBtn = document.getElementById('reconnectBtn');
+        const connControls = document.getElementById('conn-controls');
+
+        const calcModeCheckBox = document.getElementById('calcmodechkbox');
+        const bossCheckbox = document.getElementById('bossOnlyCheckbox');
+        const singleModeCheckbox = document.getElementById('singleModeCheckbox');
+        const clearBtn = document.getElementById('clearBtn');
+        const runtimeText = document.getElementById('runtime-text');
+
+        const damageByUser = {};
+        const damageByTarget = {};
+        const damageByUserBySkill = {};
+        const selfDamageByUser = {}
+        const damageForDPS = {};
+        const timeForDPS = { start: 0, end: 0, timeByTarget: {}}
+        
+        // 전투 상태 및 DPS 추적
+        const combatState = {
+            isActive: false,
+            startTime: 0,
+            lastDamageTime: 0,
+            minTrackingStartTime: 0,  // 최소 DPS 추적 시작 시간 (전투 시작 후 10초)
+            maxTrackingStartTime: 0   // 최대 DPS 추적 시작 시간 (전투 시작 후 10초)
+        };
+        const dpsStats = {}; // userId별 DPS 통계 (min, max, current)
+
+        const jobMapping = {};
+        const skillTrans = {src2name:{}, name2src:{}};
+        const skillTrans2 = {src2name:{}}
+        const skillTrans3 = {src2name:{}}
+        const skillKey2Name = {}
+        const dotFlag2Name = [
+            ["bleed_flag", "출혈"],
+            ["dark_flag", "암흑"],
+            ["fire_flag", "화상"],
+            ["holy_flag", "신성"],
+            ["ice_flag", "빙결"],
+            ["electric_flag", "감전"],
+            ["poison_flag", "중독"],
+            ["mind_flag", "정신"],
+            ["dump_flag123", "무속성"]
+        ];
+
+        (function(){
+            const dottypes = ["(도트)", "(특수)"];
+            for(const dottype in dottypes){
+                for(const [_,dotname] in dotFlag2Name){
+                    dotkey = [dottype, dotname].join(" ")
+                    skillKey2Name[dotkey] = dotkey;
+                }
+            }   
+        })()
+
+        const skillDetailOpened = {};        
+        let selectedDetailUserId = null;
+        (function(){
+            document.getElementById('damage-stats-list').addEventListener('click', e => {
+                const row = e.target.closest('.rank-row');
+                if (!row) return;
+
+                if (selectedDetailUserId === row.id) {
+                    clearDetails();
+                } else {
+                    selectedDetailUserId = row.id;
+                    showDetail(row.id);
+                }
+            });
+            document.getElementById('detail-panel').addEventListener('click', e => {
+                const row = e.target.closest('.skill-row');
+                if (!row) return;
+
+                const detail = row.nextElementSibling;
+                if (detail && detail.classList.contains('skill-detail-row')) {
+                    detail.classList.toggle('hidden');
+                    skillDetailOpened[detail.id] = !detail.classList.contains('hidden');
+                }
+            });
+        })()
+
+        const bossTmpData = {id:0, hp:0};
+        const selfTmpData = {id:0, total:0}
+        
+        let p_hpdff = null
+        let bossOnly = false;
+        let bossMode = null;
+        let singleMode = false;
+        let render_timeout = null;
+
+        function getRuntimeMs(isBossMode, bossid){
+            return isBossMode
+                    ? timeForDPS.timeByTarget[bossid]
+                        ? (timeForDPS.timeByTarget[bossid].end - timeForDPS.timeByTarget[bossid].start)
+                        : 0
+                    : (timeForDPS.end - timeForDPS.start);                    
+        }
+
+        function getTotalDamage(isBossMode, uid, bossid){
+            return isBossMode 
+                ? (damageForDPS[uid].total_by_target[bossid] ??  0) 
+                : damageForDPS[uid].total;
+        }
+
+        function calcAddHitPercent(nAddHit, nAll) {
+            return nAddHit ? nAddHit / (nAll-nAddHit) * 100 : 0;
+        }
+
+        function calcCritHitPercent(nCrit, nAll){
+            return nCrit ? nCrit / nAll * 100 : 0;
+        }
+
+        // 전투 상태 관리 함수들
+        function startCombat() {
+            const now = Date.now();
+            combatState.isActive = true;
+            combatState.startTime = now;
+            combatState.lastDamageTime = now;
+            combatState.minTrackingStartTime = now + 10000; // 10초 후부터 최소 DPS 추적
+            combatState.maxTrackingStartTime = now + 10000; // 10초 후부터 최대 DPS 추적
+            
+            console.log("⚔️ 전투 시작");
+        }
+
+        function endCombat() {
+            combatState.isActive = false;
+            console.log("🛡️ 전투 종료");
+        }
+
+        function resetCombat() {
+            // 새로운 전투 시작 - 초기화 버튼과 동일한 동작
+            console.log("🔄 새로운 전투 시작 - 데이터 초기화");
+            clearDPS();
+            clearDamages();
+            startCombat();
+            // renderDamageRanks()는 호출하지 않음 - 새 데미지 처리 후에 호출됨
+        }
+
+        function updateDPSStats(userId) {
+            if (!combatState.isActive) return;
+            
+            const now = Date.now();
+            const combatTime = (now - combatState.startTime) / 1000;
+            const totalDamage = damageByUser[userId]?.total || 0;
+            const currentDPS = combatTime > 0 ? Math.floor(totalDamage / combatTime) : 0;
+            
+            if (!dpsStats[userId]) {
+                dpsStats[userId] = {
+                    min: Infinity,
+                    max: 0,
+                    current: currentDPS
+                };
+            }
+            
+            dpsStats[userId].current = currentDPS;
+            
+            // 최대 DPS는 전투 시작 후 10초 이후부터만 추적
+            if (now >= combatState.maxTrackingStartTime && currentDPS > 0) {
+                if (currentDPS > dpsStats[userId].max) {
+                    dpsStats[userId].max = currentDPS;
+                }
+            }
+            
+            // 최소 DPS는 전투 시작 후 10초 이후부터만 추적
+            if (now >= combatState.minTrackingStartTime && currentDPS > 0) {
+                if (dpsStats[userId].min === Infinity) {
+                    dpsStats[userId].min = currentDPS;
+                } else if (currentDPS < dpsStats[userId].min) {
+                    dpsStats[userId].min = currentDPS;
+                }
+            }
+        }
+
+        function showDetail(user_id) {
+            const detailDiv = document.getElementById('detail-panel');
+            detailDiv.innerHTML = '';
+            detailDiv.classList.remove('visible');
+
+            const stat = damageByUser[user_id];
+            const skillData = damageByUserBySkill[user_id];
+            
+            if (!stat || !skillData) {
+                detailDiv.innerHTML = `<div style="color:#888;">데이터 없음</div>`;
+                detailDiv.classList.add('visible');
+                return;
+            }
+            const bossId = bossTmpData.id;
+            const isBossMode = bossOnly && bossId;
+
+            // 스킬별 딜량 집계
+            const skillRows = [];
+            let total = 0;
+            for (const skill in skillData) {
+                const skillObj = isBossMode && skillData[skill].byTarget[bossId] ? skillData[skill].byTarget[bossId] : skillData[skill];                
+                const dmg = skillObj ? skillObj.total || 0 : 0;
+                if (dmg > 0) {     
+                    const detail = {
+                        crit: skillObj.count > 0 ? calcCritHitPercent(skillObj.cnt_crit, skillObj.count).toFixed(2) : ("+"+skillObj.cnt_crit), // 파죽지세로 도트가 크리터지는 경우 고려
+                        addhit: calcAddHitPercent(skillObj.cnt_addhit, skillObj.count).toFixed(2),
+                        dot: skillObj.dot,
+                        cnt: skillObj.count || 0,
+                        cnt_dot: skillObj.cnt_dot || 0,
+                        min_dmg: skillObj.count > 0 ? skillObj.min_dmg : 0,
+                        max_dmg: skillObj.count > 0 ?  skillObj.max_dmg : 0,
+                        min_dot_dmg: skillObj.cnt_dot > 0 ? skillObj.min_dot_dmg : 0,
+                        max_dot_dmg: skillObj.cnt_dot > 0 ? skillObj.max_dot_dmg : 0,
+                    }
+                    skillRows.push({ skill, dmg, detail });
+                    total += dmg;
+                }
+            }
+            if (skillRows.length === 0) {
+                detailDiv.innerHTML = `<div style="color:#888;">데이터 없음</div>`;
+                detailDiv.classList.add('visible');
+                return;
+            }
+            skillRows.sort((a, b) => b.dmg - a.dmg);
+
+            const count = stat.count || 1;
+            const critRate = calcCritHitPercent(stat.crit, count).toFixed(2);
+            const addhitRate = calcAddHitPercent(stat.addhit, count).toFixed(2);
+            let name;
+            if (user_id == selfTmpData.id) {
+                name = `<span class="rank-badge me" style="min-width:48px;display:inline-block;text-align:center;">${jobMapping[user_id] || user_id}</span>`;
+            } else {
+                name = `<span class="rank-badge" style="min-width:48px;display:inline-block;text-align:center;">${jobMapping[user_id] || user_id}</span>`;
+            }
+            shortDetailHtml = `
+                <span class="detail-title">${name}</span>
+                <div class="detail-stats">
+                    <div><span class="detail-label">크리 확률:</span>
+                    <span class="detail-value">${critRate}%</span></div>
+                    <div><span class="detail-label">추가타 확률:</span>
+                    <span class="detail-value">${addhitRate}%</span></div>
+                </div>
+            `;
+
+            let table = `<div class="skill-table">`;
+            skillRows.forEach((row, idx) => {
+                const percent = total > 0 ? ((row.dmg / total) * 100).toFixed(2) : 0;
+                // === 오버랩 그래프 추가 부분 시작 ===
+                const barColor = "#FF6B6B";
+                // bar의 height를 100%가 아니라 90% 정도로, top/bottom에 여백을 주면 행만 덮음
+                const bar = `<div style="
+                    position:absolute;
+                    left:0; top:2px; height:calc(100% - 4px); width:${percent}%;
+                    background:${barColor};
+                    opacity:0.28;
+                    border-radius:6px;
+                    z-index:0;
+                    pointer-events:none;
+                    transition:width 0.4s;
+                "></div>`;
+                const id = row.skill.replace(/[^\w가-힣]/g, '_');
+                // === 오버랩 그래프 추가 부분 끝 ===
+                table += `
+                <div class="skill-row">
+                    <div class="bar-bg" style="width: ${percent}%;"></div>
+                    <div class="skill-name">${skillKey2Name[row.skill] ?? row.skill}</div>
+                    <div class="skill-damage">${row.dmg.toLocaleString()} (${percent}%)</div>
+                    <div class="skill-crit">크확: ${row.detail.crit}%</div>
+                    <div class="skill-addhit">추확: ${row.detail.addhit}%</div>
+                </div>
+                <div id="${id}" 
+                    class="skill-detail-row ${skillDetailOpened[id] ? "" : "hidden"}">
+                    <div>
+                        <div>타격횟수: ${row.detail.cnt}</div>
+                        <div>최대 데미지: ${row.detail.max_dmg}</div>
+                        <div>최소 데미지: ${row.detail.min_dmg}</div>
+                    </div>
+                    <div>
+                        <div>도트횟수: ${row.detail.cnt_dot}</div>
+                        <div>도트딜: ${row.detail.dot} (${(row.detail.dot/row.dmg*100).toFixed(2)}%)</div>
+                        <div>도트 최대: ${row.detail.max_dot_dmg}</div>
+                        <div>도트 최소: ${row.detail.min_dot_dmg}</div>
+                    </div>
+                </div>
+                `;
+            });
+            table += `</div>`;
+
+            detailDiv.innerHTML = shortDetailHtml + table;            
+            detailDiv.classList.add('visible');
+        }
+
+        function clearDetails() {
+            selectedDetailUserId = null;
+            const detailDiv = document.getElementById('detail-panel');
+            detailDiv.classList.remove('visible');
+        }
+
+        function rankItem(rank, isSelf, jobName, total, dps, critRate, addhitRate, totalRate, minDPS, maxDPS){
+            const tr = document.createElement('tr');
+            tr.className = 'rank-row';
+
+            if (rank === 0) tr.classList.add('rank-1');
+            else if (rank === 1) tr.classList.add('rank-2');
+            else if (rank === 2) tr.classList.add('rank-3');
+            
+            // 유저 셀
+            const userCell = document.createElement('td');
+            userCell.className = 'user-cell';
+            const badge = document.createElement('span');
+            badge.className = 'user-badge' + (isSelf ? ' me' : '');
+            badge.textContent = jobName;
+            userCell.appendChild(badge);
+            
+            // 총 데미지 셀
+            const totalCell = document.createElement('td');
+            totalCell.className = 'damage-value';
+            totalCell.textContent = `${(total/10000).toFixed(1)}만`;
+            
+            // 기여도 셀
+            const contributionCell = document.createElement('td');
+            contributionCell.className = 'contribution-value';
+            contributionCell.textContent = `${(totalRate*100).toFixed(1)}%`;
+            
+            // DPS 셀
+            const dpsCell = document.createElement('td');
+            dpsCell.className = 'dps-value';
+            dpsCell.textContent = `${(dps/10000).toFixed(1)}만`;
+            
+            // 최소 DPS 셀
+            const minDPSCell = document.createElement('td');
+            minDPSCell.className = 'min-dps-value';
+            minDPSCell.textContent = minDPS === Infinity ? '0만' : `${(minDPS/10000).toFixed(1)}만`;
+            
+            // 최대 DPS 셀
+            const maxDPSCell = document.createElement('td');
+            maxDPSCell.className = 'max-dps-value';
+            maxDPSCell.textContent = `${(maxDPS/10000).toFixed(1)}만`;
+            
+            // 치명타율 셀
+            const critCell = document.createElement('td');
+            critCell.className = 'crit-rate';
+            critCell.textContent = `${critRate.toFixed(1)}%`;
+            
+            // 추가타율 셀
+            const addCell = document.createElement('td');
+            addCell.className = 'add-rate';
+            addCell.textContent = `${addhitRate.toFixed(1)}%`;
+
+            tr.appendChild(userCell);
+            tr.appendChild(totalCell);
+            tr.appendChild(contributionCell);
+            tr.appendChild(dpsCell);
+            tr.appendChild(minDPSCell);
+            tr.appendChild(maxDPSCell);
+            tr.appendChild(critCell);
+            tr.appendChild(addCell);
+
+            return tr;
+        }
+
+        // 데미지 순위 표시 함수
+        function renderDamageRanks() {
+            let statsSource = damageByUser;
+            // 보스만 보기 체크시 bossTmpData.id 사용
+            if (bossOnly && bossTmpData.id && damageByTarget[bossTmpData.id]) {
+                statsSource = damageByTarget[bossTmpData.id].byUser;
+            }
+            const totalSum = Object.values(statsSource)
+                .reduce((sum, stat) => sum + (stat.total || 0), 0);
+
+            const statsList = document.getElementById('damage-stats-list');
+            while (statsList.firstChild) statsList.removeChild(statsList.firstChild);
+
+            const sorted = Object.entries(statsSource)
+                .sort((a, b) => b[1].total - a[1].total)
+                .slice(0, 12);
+            sorted
+                .filter(([user_id, stat])=>
+                    jobMapping[user_id] != null
+                )
+                .forEach(([user_id, stat], idx) => {
+                    const total = stat.total || 0;
+                    const dps = Math.floor(getTotalDamage(bossOnly, user_id, bossTmpData.id)/(getRuntimeMs(bossOnly, bossTmpData.id) / 1000+1));
+                    const count = stat.count || 1;
+                    const critRate = calcCritHitPercent(stat.crit, count);
+                    const addhitRate = calcAddHitPercent(stat.addhit,count);
+                    const totalRate = sorted.length === 1 ? 1 : totalSum > 0 ? total / totalSum : 0
+                    const jobName =  jobMapping[user_id] ? jobMapping[user_id] : user_id;
+                    const isSelf = selfTmpData.id == user_id;
+                    
+                    // 5초간 DPS의 Min/Max 값 계산
+                    const userDPSStats = dpsStats[user_id] || { min: Infinity, max: 0, current: 0 };
+                    const minDPS = userDPSStats.min === Infinity ? 0 : userDPSStats.min;
+                    const maxDPS = userDPSStats.max || 0;
+                    
+                    const tr = rankItem(idx, isSelf, jobName, total, dps, critRate, addhitRate, totalRate, minDPS, maxDPS);
+                    tr.id = user_id;
+                    statsList.appendChild(tr);
+                });
+
+            // 디테일 패널 상태 유지
+            if (selectedDetailUserId && damageByUser[selectedDetailUserId]) {
+                showDetail(selectedDetailUserId);
+            } else {
+                clearDetails();
+            }
+        }
+
+        function clearDPS(){
+            timeForDPS.start = timeForDPS.end  = 0; // 아주 옛날로
+            Object.keys(timeForDPS.timeByTarget).forEach(key => {
+                delete timeForDPS.timeByTarget[key];
+            });
+            Object.keys(damageForDPS).forEach(key => {
+                damageForDPS[key].total = 0;
+                damageForDPS[key].total_by_target = {};
+            });
+            // DPS 통계 초기화
+            Object.keys(dpsStats).forEach(key => {
+                delete dpsStats[key];
+            });
+            // 전투 상태 초기화
+            combatState.isActive = false;
+            combatState.startTime = 0;
+            combatState.lastDamageTime = 0;
+            combatState.minTrackingStartTime = 0;
+            combatState.maxTrackingStartTime = 0;
+        }
+
+        function clearDamages(){
+            Object.keys(damageByUser).forEach(key => {
+                delete damageByUser[key];
+            });
+            Object.keys(damageByTarget).forEach(key => {
+                delete damageByTarget[key];
+            });
+            Object.keys(damageByUserBySkill).forEach(key => {
+                delete damageByUserBySkill[key];
+            });
+            Object.keys(selfDamageByUser).forEach(key => {
+                delete selfDamageByUser[key];
+            });
+            bossTmpData.hp = 0;
+            selfTmpData.total = 0;
+        }
+
+        function updateBoss(tid, prev_hp, total){
+            if (bossMode == "highest_hp") {
+                if (bossTmpData.hp < prev_hp){
+                    bossTmpData.id = tid;
+                    bossTmpData.hp = prev_hp;
+                }
+            }
+            else if(bossMode == "most_attacked"){
+                if (bossTmpData.hp < total){
+                    bossTmpData.id = tid;
+                    bossTmpData.hp = total;
+                }
+            }
+            else{
+                bossTmpData.id = tid;
+                bossTmpData.hp = total;
+            }
+        }
+
+        function processDamage(dmg, uid, tid, flags, key1){
+            const is_crit      = flags.crit_flag === 1;
+            const is_addhit    = flags.add_hit_flag === 1;
+            const is_dot       = (flags.dot_flag && flags.dot_flag2 && flags.dot_flag3) || flags.dot_flag4;
+            const is_special   = flags.dot_flag || flags.dot_flag2 || flags.dot_flag3;
+
+            const now = Date.now();
+            
+            // 전투 상태 관리
+            if (!combatState.isActive) {
+                // 전투 종료 후 새로운 데미지가 들어오면 새 전투 시작 (데이터 초기화)
+                if (combatState.lastDamageTime > 0) {
+                    resetCombat();
+                } else {
+                    // 첫 전투 시작
+                    startCombat();
+                }
+            } else {
+                // 마지막 데미지로부터 3초 이상 지났는지 확인
+                if (now - combatState.lastDamageTime > 3000) {
+                    // 전투가 끝났다가 새로운 데미지가 들어온 상황
+                    resetCombat();
+                } else {
+                    // 전투 지속 중
+                    combatState.lastDamageTime = now;
+                }
+            }
+
+            if (!damageByUser[uid]) 
+                damageByUser[uid] = {
+                    count: 0,
+                    total: 0,
+                    crit: 0,
+                    addhit: 0,
+                }; 
+            damageByUser[uid].total += dmg;
+            if (!is_dot){
+                damageByUser[uid].count++;
+                damageByUser[uid].crit += is_crit;
+                damageByUser[uid].addhit += is_addhit;
+            }
+                            
+            if (!damageByTarget[tid]) 
+                damageByTarget[tid] = { total: 0, byUser: {}};
+            if (!damageByTarget[tid].byUser[uid]) 
+                damageByTarget[tid].byUser[uid] = {
+                    count: 0,
+                    total: 0,
+                    crit: 0,
+                    addhit: 0,
+                };
+            damageByTarget[tid].total += dmg;
+            damageByTarget[tid].byUser[uid].total += dmg;
+            if(!is_dot){
+                damageByTarget[tid].byUser[uid].count++;
+                damageByTarget[tid].byUser[uid].crit += is_crit;
+                damageByTarget[tid].byUser[uid].addhit += is_addhit;
+            }
+
+            if ((Date.now() - timeForDPS.end) > 1000 * 60){
+                clearDPS();
+                timeForDPS.start = Date.now();
+                console.log("DPS 초기화");
+            }
+            timeForDPS.end = Date.now();
+            if (!timeForDPS.timeByTarget[tid]){
+                timeForDPS.timeByTarget[tid] = {
+                    start: Date.now(),
+                    end: Date.now(),
+                }
+            }
+            timeForDPS.timeByTarget[tid].end = Date.now();
+
+            if (!damageForDPS[uid]){
+                damageForDPS[uid] = {
+                    total: 0,
+                    total_by_target: {},
+                };
+            }
+            damageForDPS[uid].total += dmg;
+            if (!damageForDPS[uid].total_by_target[tid]) damageForDPS[uid].total_by_target[tid] = 0; 
+            damageForDPS[uid].total_by_target[tid] += dmg;
+
+            if(!damageByUserBySkill[uid])
+                damageByUserBySkill[uid] = {}
+            const damageByS = damageByUserBySkill[uid];
+            let skey = null;
+            if (key1 != 0){
+                skey = skillTrans2.src2name[key1] || skillKey2Name[key1] || key1;               
+            }
+            else if(is_dot){
+                const keyparts = ["(도트)"];
+                for (const [flag, label] of dotFlag2Name) if (flags[flag]) keyparts.push(label);
+                if (keyparts.length == 1) keyparts.push("무속성")
+                skey = keyparts.join(" ")
+            }
+            else {            
+                const keyparts = ["(특수)"];
+                for (const [flag, label] of dotFlag2Name) if (flags[flag]) keyparts.push(label);
+                if (keyparts.length == 1) keyparts.push("무속성")
+                skey = keyparts.join(" ")
+            }
+            function skilldetailfact() {
+                return {
+                    total: 0,
+                    dot: 0,
+                    count: 0,
+                    cnt_crit: 0,
+                    cnt_addhit: 0,
+                    cnt_dot: 0,
+                    max_dmg: 0,
+                    min_dmg: Infinity,
+                    max_dot_dmg: 0,
+                    min_dot_dmg: Infinity,
+                };
+            }
+            if (!damageByS[skey]){
+                damageByS[skey] = skilldetailfact();
+                damageByS[skey].byTarget = {};
+            }
+            const dt = damageByS[skey];
+            if (!dt.byTarget[tid]) {
+                dt.byTarget[tid] = skilldetailfact();
+            }
+            const dtt = dt.byTarget[tid];
+            for (const kkk of [dt, dtt]){            
+                kkk.total += dmg;
+                kkk.dot += is_dot ? dmg : 0;
+                if (!is_dot){
+                    is_crit      && kkk.cnt_crit++;
+                    is_addhit    && kkk.cnt_addhit++;
+                    kkk.count++;
+                    kkk.max_dmg = Math.max(kkk.max_dmg, dmg);
+                    kkk.min_dmg = Math.min(kkk.min_dmg, dmg);
+                }
+                else{
+                    kkk.cnt_dot++;
+                    kkk.max_dot_dmg = Math.max(kkk.max_dot_dmg, dmg);
+                    kkk.min_dot_dmg = Math.min(kkk.min_dot_dmg, dmg);
+                }
+            }
+            
+            // DPS 통계 업데이트
+            updateDPSStats(uid);
+        }
+
+        function processJson(obj) {
+            // obj는 {type: "json", hide: bool, data: [...]}
+            let items = obj.data;
+            if (!Array.isArray(items) || items.length === 0) return;
+
+            // 사용하는 데이터 처리
+            let updated = false;
+            items.forEach(entry => {
+                if (!entry || typeof entry !== "object") return;                
+                switch (entry.type) {       
+                    case 3:
+                        if(entry.prev_hp > entry.current_hp && !singleMode){
+                            p_hpdff = entry;
+                        }
+                        else {
+                            p_hpdff = null;
+                        }
+                        break;
+                    case 4:
+                        {
+                            if (entry.damage > 2095071572) return;
+
+                            const uid = entry.user_id;
+                            if(!selfDamageByUser[uid]) {
+                                selfDamageByUser[uid] = {
+                                    id: uid,
+                                    total: 0,
+                                };
+                            }
+                            selfDamageByUser[uid].total += entry.damage;
+
+                            if (selfTmpData.total < selfDamageByUser[uid].total) {
+                                selfTmpData.id = uid;
+                                selfTmpData.total = selfDamageByUser[uid].total;
+                            }
+                            
+                            if (singleMode){
+                                p_hpdff = {
+                                    prev_hp:entry.damage,
+                                    current_hp:0,
+                                    target_id:entry.target_id,
+                                }
+                            }
+                        }
+                        break;
+                    case 1:
+                        if(p_hpdff != null && entry.target_id == p_hpdff.target_id){
+                            const dmg = Number(p_hpdff.prev_hp - p_hpdff.current_hp) || 0;
+                            processDamage(dmg, entry.user_id, entry.target_id, entry.flags, entry.key1);
+                            updateBoss(entry.target_id, p_hpdff.prev_hp, damageByTarget[entry.target_id].total);
+                            updated = true;
+                        }
+                        break;
+                    case 2:
+                        {
+                            const uid = entry.user_id;
+                            const sk = entry.skill_name.toLowerCase();
+                            if (!jobMapping[entry.user_id]) {
+
+                                if(sk.includes("expertwarrior")) jobMapping[uid] = "전사";
+                                else if(sk.includes("greatsword")) jobMapping[uid] = "대검";
+                                else if(sk.includes("swordmaster")) jobMapping[uid] = "검술";
+                            
+                                else if(sk.includes("healer")) jobMapping[uid] = "힐러";
+                                else if(sk.includes("monk")) jobMapping[uid] = "수도";
+                                else if(sk.includes("priest")) jobMapping[uid] = "사제";
+
+                                else if(sk.includes("bard")) jobMapping[uid] = "음유";                            
+                                else if(sk.includes("battlemusician")) jobMapping[uid] = "악사";
+                                else if(sk.includes("dancer")) jobMapping[uid] = "댄서";
+                            
+                                else if(sk.includes("fighter")) jobMapping[uid] = "격가";
+                                else if(sk.includes("dualblades")) jobMapping[uid] = "듀블";
+                                else if(sk.includes("highthief")) jobMapping[uid] = "도적";
+                            
+                                else if(sk.includes("highmage")) jobMapping[uid] = "븝미";
+                                else if(sk.includes("firemage")) jobMapping[uid] = "화법";
+                                else if(sk.includes("icemage")) jobMapping[uid] = "빙결";
+                                else if(sk.includes("lightningmage")) jobMapping[uid] = "전격";
+
+                                else if(sk.includes("higharcher")) jobMapping[uid] = "궁수";
+                                else if(sk.includes("arbalist")) jobMapping[uid] = "석궁";
+                                else if(sk.includes("longbowman")) jobMapping[uid] = "장궁";
+
+                                else if(sk.includes("novicewarrior_shieldbash")) jobMapping[uid] = null;
+                                else if(sk.includes("novice")) jobMapping[uid] = "뉴비";
+                                else if(sk.includes("defaultattack")) jobMapping[uid] = null;
+
+                                else{
+                                    jobMapping[uid] = null                           
+                                }
+                            }
+
+                            if (!skillKey2Name[entry.key1] && !skillTrans3.src2name[entry.skill_name]){
+                                skillKey2Name[entry.key1] = skillTrans.src2name[entry.skill_name] || entry.skill_name;
+                            }
+                        }
+                        break;
+                    default:
+                        console.log("failed " + entry.type)
+                        // 필요시 다른 타입 처리
+                        break;
+                }
+            });
+            if (updated) {
+                if (render_timeout) return;
+                render_timeout = setTimeout(() => {
+                    renderDamageRanks();
+                    render_timeout = null;
+                }, 100);
+            }
+        }
+
+        function setButtons(connected) {
+            if (connected) {
+                disconnectBtn.style.display = '';
+                reconnectBtn.style.display = 'none';
+                connControls.style.background = 'none';
+            } else {
+                disconnectBtn.style.display = 'none';
+                reconnectBtn.style.display = '';
+                connControls.style.background = 'none';
+            }
+        }
+
+        function connect() {
+            ws = new WebSocket(wsUrl);
+
+            ws.onopen = () => {
+                setButtons(true);
+            };
+
+            ws.onmessage = (event) => {
+                try {
+                    const obj = JSON.parse(event.data);
+                    switch (obj.type) {
+                        case "json":
+                            processJson(obj);
+                            break;
+                        case "skill":
+                            skillTrans.src2name = obj.data;
+                            break;
+                        case "skill2":
+                            skillTrans2.src2name = obj.data;
+                            break;
+                        case "skill3":
+                            skillTrans3.src2name = obj.data;
+                            break;
+                        default:
+                            console.warn("알 수 없는 메시지 타입:", obj.type);
+                    }
+                } catch (e) {
+                    console.log("메시지 처리 오류:", e, event.data);
+                }
+            };
+
+            ws.onclose = () => {
+                setButtons(false);
+            };
+
+            ws.onerror = (err) => {
+                setButtons(false);
+            };
+        }
+
+        disconnectBtn.onclick = () => {
+            if (ws && ws.readyState === WebSocket.OPEN) {
+                ws.close();
+            }
+        };
+        reconnectBtn.onclick = () => {
+            connect();
+        };
+        calcModeCheckBox.onchange = () => {
+            bossOnly = calcModeCheckBox.value != "all";
+            bossMode = calcModeCheckBox.value;                
+            renderDamageRanks();
+        };
+        singleModeCheckbox.onchange = () => {
+            singleMode = singleModeCheckbox.checked;                
+            renderDamageRanks();
+        };
+        clearBtn.onclick = () => {
+            clearDPS();
+            clearDamages();
+            renderDamageRanks();
+        };;
+        setInterval(() => {
+            const elapsed = (getRuntimeMs(bossOnly, bossTmpData.id) / 1000).toFixed(2);
+            
+            // 전투 상태 확인 및 표시
+            let combatStatus = "대기중";
+            if (combatState.isActive) {
+                const now = Date.now();
+                if (now - combatState.lastDamageTime > 3000) {
+                    endCombat();
+                    combatStatus = "전투종료";
+                } else {
+                    combatStatus = "전투중";
+                }
+            } else if (combatState.lastDamageTime > 0) {
+                combatStatus = "전투종료";
+            }
+            
+            runtimeText.textContent = `${elapsed}초 (${combatStatus})`;
+            
+            // 전투 중일 때만 DPS 업데이트
+            if (combatState.isActive) {
+                Object.keys(damageByUser).forEach(userId => {
+                    updateDPSStats(userId);
+                });
+            }
+        }, 500);
+
+        setButtons(false);
+        connect();
+
+        const saveAllBtn = document.getElementById('saveAllBtn');
+        saveAllBtn.onclick = () => {
+            if (ws && ws.readyState === WebSocket.OPEN) {
+                ws.close();
+            }
+            function getKoreaTime(){
+                const now = new Date();
+                const kst = new Date(now.toLocaleString('en-US', { timeZone: 'Asia/Seoul' }));
+                const yyyy = kst.getFullYear();
+                const mm = String(kst.getMonth() + 1).padStart(2, '0');
+                const dd = String(kst.getDate()).padStart(2, '0');
+                const HH = String(kst.getHours()).padStart(2, '0');
+                const MM = String(kst.getMinutes()).padStart(2, '0');
+                const SS = String(kst.getSeconds()).padStart(2, '0');
+                return `${yyyy}-${mm}-${dd}T${HH}-${MM}-${SS}`;
+            }
+            const data = {
+                damageByUser,
+                damageByTarget,
+                damageByUserBySkill,
+                selfDamageByUser,
+                damageForDPS,
+                timeForDPS,
+                combatState,
+                dpsStats,
+                jobMapping,
+                skillTrans,
+                skillTrans2,
+                skillTrans3,
+                skillKey2Name,
+                dotFlag2Name,
+                bossTmpData,
+                selfTmpData
+            };
+            const blob = new Blob([JSON.stringify(data, null, 2)], {type: "application/json"});
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `savedata_${getKoreaTime()}.json`;
+            document.body.appendChild(a);
+            a.click();
+            setTimeout(() => {
+                document.body.removeChild(a);
+                URL.revokeObjectURL(url);
+            }, 100);
+        };
+
+        // 데이터 불러오기 버튼 및 파일 input 생성
+        const loadAllBtn = document.getElementById('loadAllBtn');
+        let fileInput = document.createElement('input');
+        fileInput.type = 'file';
+        fileInput.accept = '.json';
+
+        loadAllBtn.onclick = () => {
+            if (ws && ws.readyState === WebSocket.OPEN) {
+                ws.close();
+            }
+            fileInput.value = '';
+            fileInput.click();
+        };
+
+        fileInput.onchange = (e) => {
+            const file = e.target.files[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = function(ev) {
+                try {
+                    const data = JSON.parse(ev.target.result);
+                    // === 기존 데이터 초기화 ===
+                    Object.keys(damageByUser).forEach(key => delete damageByUser[key]);
+                    Object.keys(damageByTarget).forEach(key => delete damageByTarget[key]);
+                    Object.keys(damageByUserBySkill).forEach(key => delete damageByUserBySkill[key]);
+                    Object.keys(selfDamageByUser).forEach(key => delete selfDamageByUser[key]);
+                    Object.keys(damageForDPS).forEach(key => delete damageForDPS[key]);
+                    Object.keys(timeForDPS).forEach(key => delete timeForDPS[key]);
+                    Object.keys(dpsStats).forEach(key => delete dpsStats[key]);
+                    Object.keys(jobMapping).forEach(key => delete jobMapping[key]);
+                    Object.keys(skillTrans).forEach(key => delete skillTrans[key]);
+                    Object.keys(skillTrans2).forEach(key => delete skillTrans2[key]);
+                    Object.keys(skillKey2Name).forEach(key => delete skillKey2Name[key]);
+                    Object.keys(bossTmpData).forEach(key => delete bossTmpData[key]);
+                    Object.keys(selfTmpData).forEach(key => delete selfTmpData[key]);
+                    dotFlag2Name.length = 0;
+
+                    // === 불러온 데이터 적용 ===
+                    Object.assign(damageByUser, data.damageByUser || {});
+                    Object.assign(damageByTarget, data.damageByTarget || {});
+                    Object.assign(damageByUserBySkill, data.damageByUserBySkill || {});
+                    Object.assign(selfDamageByUser, data.selfDamageByUser || {});
+                    Object.assign(damageForDPS, data.damageForDPS || {});
+                    Object.assign(timeForDPS, data.timeForDPS || {});
+                    Object.assign(combatState, data.combatState || { isActive: false, startTime: 0, lastDamageTime: 0, minTrackingStartTime: 0, maxTrackingStartTime: 0 });
+                    Object.assign(dpsStats, data.dpsStats || {});
+                    Object.assign(jobMapping, data.jobMapping || {});
+                    Object.assign(skillTrans, data.skillTrans || {});
+                    Object.assign(skillTrans2, data.skillTrans2 || {});
+                    Object.assign(skillKey2Name, data.skillKey2Name || {});
+                    Object.assign(bossTmpData, data.bossTmpData || {});
+                    Object.assign(selfTmpData, data.selfTmpData || {});
+                    if (Array.isArray(data.dotFlag2Name)) {
+                        data.dotFlag2Name.forEach(v => dotFlag2Name.push(v));
+                    }
+                    renderDamageRanks();
+                    // alert('데이터를 성공적으로 불러왔습니다.');
+                } catch (err) {
+                    alert('불러오기 실패: ' + err);
+                }
+            };
+            reader.readAsText(file, 'utf-8');
+        };
+    </script>
+</body>
+</html>
