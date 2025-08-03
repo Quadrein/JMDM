@@ -1,0 +1,11 @@
+{
+    "Debug": true,
+    "Port": 8080,
+    "Iface": "None",
+    "AutoResetDelay": 10,
+    "MonitoredBuffs": [
+        "1084538181",
+        "1712968343",
+        "421009442"
+    ]
+}
