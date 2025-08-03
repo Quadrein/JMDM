@@ -1,72 +1,114 @@
-# MDM2C - Combat Log Analyzer (C# Version)
+# JMDM - 실시간 데미지 미터 
+ 
+## 🎮 게임 패킷 분석 도구 
+ 
+실시간으로 게임 패킷을 분석하여 데미지 통계를 제공하는 도구입니다. 
+ 
+## 📋 필수 요구사항 
+ 
+- **Windows 10/11 (64비트)** 
+- **Npcap 드라이버** - [다운로드](https://npcap.com/) 
+- **관리자 권한** 
+ 
+## 🚀 사용 방법 
+ 
+1. **Npcap 설치** 
+   - 위 링크에서 Npcap을 다운로드하여 설치 
+ 
+2. **프로그램 실행** 
+   - `Build` 폴더로 이동 
+   - `JMDM.bat`를 관리자 권한으로 실행 
+   - 또는 `JMDM-Start.vbs`를 더블클릭 
+ 
+3. **네트워크 인터페이스 선택** 
+   - 프로그램이 자동으로 인터페이스를 감지합니다 
+   - 필요시 수동으로 선택 가능 
+ 
+4. **웹 인터페이스 접속** 
+   - 웹브라우저에서 `http://localhost:8080` 접속 
+   - 실시간 데미지 통계 확인 
+ 
+## ⌨️ 단축키 
+ 
+- **C키**: 네트워크 인터페이스 변경 
+- **Q키**: 프로그램 종료 
+ 
+## 📁 파일 구성 
+ 
+- `JMDM.exe` - 메인 실행파일 (모든 라이브러리 포함) 
+- `JMDM.bat` - 관리자 권한 실행 스크립트 
+- `JMDM-Start.vbs` - 더블클릭 실행용 
+- `content/` - 웹 인터페이스 
+ 
+## ⚠️ 주의사항 
+ 
+- 관리자 권한 없이는 패킷 캡처가 작동하지 않습니다 
+- 방화벽에서 차단되는 경우 허용 처리가 필요합니다 
+- 일부 안티바이러스에서 오탐할 수 있으니 예외 처리하세요 
 
-MDM2C is a C# implementation of the MDM2 combat log analyzer. It captures network packets from game traffic, analyzes combat data in real-time, and provides a web-based interface for viewing DPS statistics.
+## 🛡️ 실시간 버프 표시 설정
 
-## Features
+실시간으로 표시할 버프를 선택하려면 `Build/content/settings.json` 파일의 `MonitoredBuffs` 항목을 수정합니다.
 
-- Real-time packet capture using SharpPcap
-- TCP stream reassembly and packet parsing
-- Combat data analysis (damage, healing, buffs)
-- WebSocket-based real-time data streaming
-- Web-based UI with damage rankings and detailed statistics
-- Single executable deployment
-
-## Requirements
-
-- Windows x64
-- WinPcap or Npcap installed
-- Administrator privileges (for packet capture)
-
-## Building
-
-Run the build script to create a single executable:
-
-```batch
-build.bat
+### 설정 파일 위치
+```
+Build/
+└── content/
+    └── settings.json
 ```
 
-The build script will:
-1. Clean previous builds
-2. Restore NuGet packages
-3. Build the project in Release mode
-4. Publish as a self-contained single file executable
+### 설정 방법
 
-The output executable will be located at:
-`bin\Release\net8.0\win-x64\publish\MDM2C.exe`
+1. **settings.json 파일 열기**
+   ```json
+   {
+       "Debug": true,
+       "Port": 8080,
+       "Iface": "None",
+       "AutoResetDelay": 10,
+       "MonitoredBuffs": [
+           "1084538181",    // (빙결)앱솔(피감)
+           "1712968343",    // (빙결)서리(패시브)
+           "421009442"      // (빙결)아이스스파이크(패시브)
+       ]
+   }
+   ```
 
-## Usage
+2. **버프 ID 추가하기**
+   - `_buffs.json` 파일에서 원하는 버프의 `code` 값을 확인
+   - 해당 코드를 `MonitoredBuffs` 배열에 추가
+   - 쉼표로 구분하여 여러 개 추가 가능
 
-1. Run MDM2C.exe as Administrator
-2. Open your web browser and navigate to: http://localhost:8080
-3. The application will automatically capture packets from port 16000
-4. Combat statistics will be displayed in real-time
+### 예시: 새로운 버프 추가
 
-## Configuration
-
-Edit `Resources\content\settings.json` to configure:
-- `Port`: Web server port (default: 8080)
-- `Iface`: Network interface name (default: auto-detect)
-- `Debug`: Enable debug mode (default: false)
-
-## Project Structure
-
+```json
+"MonitoredBuffs": [
+    "1084538181",    // (빙결)앱솔(피감)
+    "1712968343",    // (빙결)서리(패시브)
+    "421009442",     // (빙결)아이스스파이크(패시브)
+    "775737101",     // (전설)여신의 가호 - 새로 추가
+    "1264519636"     // (전설)붉은 맹약 - 새로 추가
+]
 ```
-MDM2C/
-├── Core/           # Core logic (analyzers, mappers)
-├── Data/           # Data models and structures
-├── Network/        # Networking (packet capture, WebSocket)
-├── Resources/      # Embedded resources (HTML, JSON)
-└── UI/             # Web server components
+
+### 버프 코드 찾기
+
+`Build/content/_buffs.json` 파일에서 버프 이름으로 검색하여 코드 확인:
+```json
+"(전설)여신의 가호": {
+    "type": 1,
+    "code": 775737101,    // 이 값을 MonitoredBuffs에 추가
+    "dmg": 25
+}
 ```
 
-## Key Components
-
-- **PacketStreamer**: Captures and reassembles TCP packets
-- **PacketParser**: Parses binary packet data into structured format
-- **CombatLogAnalyzer**: Analyzes combat data and maintains statistics
-- **WebSocketServer**: Streams real-time data to web clients
-- **WebServer**: Serves the web interface
-
-## License
-
-This project is based on MDM2 and follows the same licensing terms.
+### 적용 방법
+1. `settings.json` 파일 수정 후 저장
+2. JMDM 프로그램 재시작
+3. 웹 인터페이스에서 설정한 버프만 실시간으로 표시됨
+ 
+## 🔧 문제 해결 
+ 
+- **실행이 안 될 경우**: Npcap 설치 여부 확인 
+- **패킷이 캡처되지 않을 경우**: 관리자 권한으로 실행했는지 확인 
+- **웹페이지가 열리지 않을 경우**: 방화벽 설정 확인
